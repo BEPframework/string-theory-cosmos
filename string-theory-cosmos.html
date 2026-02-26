@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>String Theory Cosmos • Research Instrument + Sweep Mode</title>
+  <style>
+    html, body { margin:0; padding:0; background:#01050f; color:#e0f0ff; font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; overflow:hidden; }
+    #canvas { display:block; width:100vw; height:100vh; }
+
+    #toggleBtn {
+      position:absolute; top:18px; left:18px; z-index:400;
+      width:54px; height:54px; background:rgba(8,14,42,0.96); border:2px solid rgba(120,190,255,0.75);
+      border-radius:50%; font-size:27px; display:flex; align-items:center; justify-content:center;
+      cursor:pointer; backdrop-filter:blur(18px); box-shadow:0 8px 32px rgba(0,0,0,0.8);
+      transition:transform .2s ease;
+      user-select:none;
+    }
+    #toggleBtn:hover { transform:scale(1.12); }
+
+    #pauseBtn {
+      position:absolute; top:18px; left:88px; z-index:400;
+      padding:12px 20px; background:rgba(8,14,42,0.96); border:2px solid rgba(120,190,255,0.75);
+      border-radius:9999px; font-size:14px; font-weight:800; color:#e0f0ff; cursor:pointer;
+      backdrop-filter:blur(18px); box-shadow:0 8px 32px rgba(0,0,0,0.8);
+      transition:transform .15s, background .15s;
+      user-select:none;
+    }
+    #pauseBtn:hover { background:rgba(20,35,80,0.98); transform:scale(1.04); }
+
+    #ui {
+      position:absolute; top:18px; left:18px; z-index:300;
+      background:rgba(6,11,38,0.97); border-radius:18px; padding:16px 16px; width:384px;
+      border:1px solid rgba(110,175,255,0.65); backdrop-filter:blur(22px);
+      box-shadow:0 16px 60px rgba(0,0,0,0.85);
+      transition:transform .35s cubic-bezier(0.34,0.74,0,1), opacity .35s;
+      will-change:transform,opacity;
+      max-height:calc(100vh - 36px);
+      overflow:auto;
+    }
+    #ui.hidden { transform:translateX(-430px); opacity:0; pointer-events:none; }
+
+    #title { font-size:18px; font-weight:900; margin-bottom:4px; background:linear-gradient(90deg,#88d8ff,#ffcc88); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    #subtitle { font-size:12.8px; color:#a0b8f0; margin-bottom:12px; line-height:1.35; }
+
+    .row { margin:12px 0 0; }
+    .row:first-of-type { margin-top:0; }
+    .label { font-size:13px; display:block; margin:0 0 5px; color:#b8ccff; cursor:help; user-select:none; }
+    select, input[type="range"], input[type="number"] { width:100%; accent-color:#77ccff; border-radius:10px; }
+    select { padding:6px; color:#fff; background:rgba(255,255,255,0.08); border:1px solid rgba(120,190,255,0.25); }
+    input[type="number"]{ padding:8px 10px; color:#fff; border:1px solid rgba(120,190,255,0.25); background:rgba(255,255,255,0.06); }
+
+    .switchRow { display:flex; align-items:center; justify-content:space-between; margin-top:12px; gap:12px; }
+    .switchTitle { font-size:13px; color:#b8ccff; cursor:help; user-select:none; }
+
+    .toggle-switch { position:relative; display:inline-block; width:48px; height:24px; flex:0 0 auto; }
+    .toggle-switch input { opacity:0; width:0; height:0; }
+    .slider { position:absolute; cursor:pointer; inset:0; background:#334; border-radius:24px; transition:background .2s; }
+    .slider:before { position:absolute; content:""; height:18px; width:18px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:transform .2s; }
+    input:checked + .slider { background:#77ffaa; }
+    input:checked + .slider:before { transform:translateX(24px); }
+
+    .btnRow { display:flex; gap:10px; margin-top:10px; }
+    .btn {
+      flex:1;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(120,190,255,0.45);
+      background:rgba(10,18,50,0.85);
+      color:#e0f0ff;
+      font-weight:900;
+      cursor:pointer;
+      box-shadow:0 10px 26px rgba(0,0,0,0.45);
+      user-select:none;
+      transition:transform .15s, background .15s, opacity .15s;
+    }
+    .btn:hover { transform:scale(1.02); background:rgba(20,32,80,0.9); }
+    .btn:disabled { opacity:0.5; cursor:not-allowed; }
+
+    #mysteryBox, #observablesBox, #modelBox, #sweepBox {
+      margin-top:12px; padding:12px 14px; background:rgba(0,0,0,0.52); border-radius:14px;
+      font-size:12.5px; line-height:1.5; color:#9ab0e8; border-left:5px solid #77ddff;
+    }
+    #observablesBox { display:none; border-left-color:#ffdd77; }
+    #modelBox { border-left-color:#bb77ff; }
+    #sweepBox { border-left-color:#77ffdd; }
+
+    #modelBox code { color:#e7d6ff; }
+
+    .mini { font-size:11.8px; color:#8aa6e0; }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .progress {
+      margin-top:10px;
+      height:10px;
+      border-radius:9999px;
+      background:rgba(255,255,255,0.08);
+      overflow:hidden;
+      border:1px solid rgba(120,190,255,0.25);
+    }
+    .bar {
+      height:100%;
+      width:0%;
+      background:rgba(120,190,255,0.75);
+      transition:width .12s;
+    }
+
+    #tooltip {
+      position:absolute; z-index:500; background:rgba(10,20,55,0.98); color:#ddf; font-size:12.5px;
+      padding:10px 12px; border-radius:11px; border:1px solid #77aaff; pointer-events:none;
+      max-width:260px; box-shadow:0 8px 25px rgba(0,0,0,0.7); display:none; line-height:1.45;
+    }
+
+    #footer {
+      position:absolute; bottom:18px; left:50%; transform:translateX(-50%); font-size:12px; color:#6a8ac4;
+      background:rgba(4,9,28,0.93); padding:9px 18px; border-radius:9999px; white-space:nowrap;
+      border:1px solid rgba(110,180,255,0.35); backdrop-filter:blur(16px);
+      user-select:none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <div id="toggleBtn" aria-label="Toggle controls" role="button" tabindex="0">☰</div>
+  <div id="pauseBtn" aria-label="Pause simulation" role="button" tabindex="0">Pause</div>
+
+  <div id="ui" role="region" aria-label="Simulation controls">
+    <div id="title">String Theory Cosmos</div>
+    <div id="subtitle">Deterministic runs • time series • exports • parameter sweep mode</div>
+
+    <div class="row">
+      <label class="label" for="seed" data-tip="Deterministic seed. Same seed and parameters produce identical runs.">Seed</label>
+      <input id="seed" type="number" value="12345" step="1" />
+      <div class="btnRow">
+        <button id="reseedBtn" class="btn" type="button">Reseed</button>
+        <button id="resetDefaultsBtn" class="btn" type="button">Defaults</button>
+      </div>
+    </div>
+
+    <div class="switchRow">
+      <div class="switchTitle" data-tip="Logs time series at 1 Hz for later analysis.">Record time series</div>
+      <label class="toggle-switch">
+        <input id="record" type="checkbox" />
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="btnRow">
+      <button id="exportJsonBtn" class="btn" type="button">Export JSON</button>
+      <button id="exportCsvBtn" class="btn" type="button">Export CSV</button>
+    </div>
+
+    <div class="row">
+      <label class="label" for="gravity" data-tip="Effective central attraction strength.">Gravity strength</label>
+      <input id="gravity" type="range" min="0.2" max="3.5" step="0.1" value="1.32" />
+    </div>
+    <div class="row">
+      <label class="label" for="psi" data-tip="Adds smooth radial+tangential coherence field.">Psi coherence</label>
+      <input id="psi" type="range" min="0" max="4" step="0.1" value="1.62" />
+    </div>
+    <div class="row">
+      <label class="label" for="closed" data-tip="Probability a particle is a closed-string proxy.">Closed string ratio</label>
+      <input id="closed" type="range" min="0" max="1" step="0.05" value="0.58" />
+    </div>
+    <div class="row">
+      <label class="label" for="cyFlux" data-tip="Calabi-Yau projection intensity (visual proxy).">Calabi-Yau flux</label>
+      <input id="cyFlux" type="range" min="0" max="3" step="0.1" value="1.55" />
+    </div>
+    <div class="row">
+      <label class="label" for="brane" data-tip="Strength of brane sheet pulls near brane lines.">Brane tension</label>
+      <input id="brane" type="range" min="0" max="2.5" step="0.1" value="1.22" />
+    </div>
+    <div class="row">
+      <label class="label" for="dark" data-tip="Outward radial push, scaled by inflation mode.">Dark Energy (expansion)</label>
+      <input id="dark" type="range" min="0" max="1.8" step="0.05" value="0.55" />
+    </div>
+    <div class="row">
+      <label class="label" for="vib" data-tip="Excitation proxy affecting phase advance and deformation.">String vibration</label>
+      <input id="vib" type="range" min="0" max="9.5" step="0.2" value="4.1" />
+    </div>
+    <div class="row">
+      <label class="label" for="noise" data-tip="Stochastic perturbation term.">Quantum foam</label>
+      <input id="noise" type="range" min="0" max="1" step="0.05" value="0.36" />
+    </div>
+    <div class="row">
+      <label class="label" for="damping" data-tip="Velocity damping each step.">Damping</label>
+      <input id="damping" type="range" min="0.88" max="0.997" step="0.001" value="0.949" />
+    </div>
+
+    <div class="switchRow">
+      <div class="switchTitle" data-tip="Adds stronger stochasticity and richer rendering.">11D M-theory Mode</div>
+      <label class="toggle-switch">
+        <input id="mtheory" type="checkbox" />
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="switchRow">
+      <div class="switchTitle" data-tip="Shrinks horizon radius with Hawking-like radiation emission.">Black Hole Evaporation</div>
+      <label class="toggle-switch">
+        <input id="evap" type="checkbox" checked />
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="row" style="margin-top:10px">
+      <label class="label" for="inflationMode" data-tip="Sets bubble nucleation rate, growth multiplier, and expansion scaling.">Inflation mode</label>
+      <select id="inflationMode">
+        <option value="standard">Standard Big Bang</option>
+        <option value="slow">Slow-roll Inflation</option>
+        <option value="eternal" selected>Eternal Inflation</option>
+        <option value="chaotic">Chaotic Multiverse</option>
+      </select>
+    </div>
+
+    <div id="mysteryBox">
+      <strong>Current concept:</strong><br />
+      <span id="mysteryText">Toy string cosmology with deterministic exportable observables</span>
+    </div>
+
+    <div id="observablesBox">
+      <strong>Live Observables (paused)</strong><br />
+      <span id="obsText"></span>
+    </div>
+
+    <div id="sweepBox">
+      <strong>Parameter sweep (paused only)</strong><br />
+      <div class="mini">Runs headless steps for speed. Exports averaged results per parameter value.</div>
+
+      <div class="row">
+        <label class="label" for="sweepParam" data-tip="Which parameter to scan. Others remain fixed.">Sweep parameter</label>
+        <select id="sweepParam">
+          <option value="gravity">gravity</option>
+          <option value="psi">psi</option>
+          <option value="closed">closed</option>
+          <option value="cyFlux">cyFlux</option>
+          <option value="brane">brane</option>
+          <option value="dark">dark</option>
+          <option value="vib">vib</option>
+          <option value="noise">noise</option>
+          <option value="damping">damping</option>
+        </select>
+      </div>
+
+      <div class="grid2">
+        <div class="row">
+          <label class="label" for="sweepMin" data-tip="Minimum value for the sweep parameter.">Min</label>
+          <input id="sweepMin" type="number" value="0.6" step="0.1" />
+        </div>
+        <div class="row">
+          <label class="label" for="sweepMax" data-tip="Maximum value for the sweep parameter.">Max</label>
+          <input id="sweepMax" type="number" value="2.0" step="0.1" />
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="row">
+          <label class="label" for="sweepSteps" data-tip="Number of values between min and max (inclusive).">Steps</label>
+          <input id="sweepSteps" type="number" value="8" step="1" min="2" />
+        </div>
+        <div class="row">
+          <label class="label" for="sweepRuns" data-tip="How many seeds per parameter value.">Runs per step</label>
+          <input id="sweepRuns" type="number" value="3" step="1" min="1" />
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="row">
+          <label class="label" for="sweepSeconds" data-tip="Headless simulation duration per run (seconds).">Seconds per run</label>
+          <input id="sweepSeconds" type="number" value="8" step="1" min="1" />
+        </div>
+        <div class="row">
+          <label class="label" for="sweepBaseSeed" data-tip="Base seed. Runs increment this by run index for reproducibility.">Base seed</label>
+          <input id="sweepBaseSeed" type="number" value="1000" step="1" />
+        </div>
+      </div>
+
+      <div class="btnRow">
+        <button id="runSweepBtn" class="btn" type="button">Run Sweep</button>
+        <button id="stopSweepBtn" class="btn" type="button" disabled>Stop</button>
+      </div>
+      <div class="btnRow">
+        <button id="exportSweepJsonBtn" class="btn" type="button" disabled>Export Sweep JSON</button>
+        <button id="exportSweepCsvBtn" class="btn" type="button" disabled>Export Sweep CSV</button>
+      </div>
+
+      <div class="progress" aria-label="Sweep progress">
+        <div id="sweepBar" class="bar"></div>
+      </div>
+      <div id="sweepStatus" class="mini" style="margin-top:8px">Idle</div>
+    </div>
+
+    <div id="modelBox">
+      <strong>Model definition (toy effective system)</strong><br />
+      State: particles with <code>(x,y,vx,vy)</code>, type open or closed.<br />
+      Forces: central attraction + coherence field + brane pulls + expansion + noise + damping.<br />
+      Notes: phenomenological and proxy-based, designed for reproducible exploration and communication.
+    </div>
+  </div>
+
+  <div id="tooltip"></div>
+
+  <div id="footer">
+    Click adds strings • Double-click reseeds • P pause • R reseed • H hide UI
+  </div>
+
+  <script>
+    const MODEL_VERSION = "1.1.0-research-sweep";
+
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d", { alpha: true });
+
+    let W = 0, H = 0, centerX = 0, centerY = 0;
+    let dpr = 1;
+    const DPR_CAP = 1.75;
+
+    // Deterministic RNG
+    function xmur3(str){
+      let h = 1779033703 ^ str.length;
+      for (let i = 0; i < str.length; i++) {
+        h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+        h = (h << 13) | (h >>> 19);
+      }
+      return function() {
+        h = Math.imul(h ^ (h >>> 16), 2246822507);
+        h = Math.imul(h ^ (h >>> 13), 3266489909);
+        h ^= (h >>> 16);
+        return h >>> 0;
+      }
+    }
+    function mulberry32(a){
+      return function(){
+        let t = a += 0x6D2B79F5;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      }
+    }
+
+    let rng = Math.random;
+    function rand(){ return rng(); }
+
+    function clamp(v, min, max) { return v < min ? min : (v > max ? max : v); }
+
+    // Offscreen grid
+    const gridCanvas = document.createElement("canvas");
+    const gridCtx = gridCanvas.getContext("2d");
+    let gridReady = false;
+    function buildGrid() {
+      const gs = 46;
+      gridCanvas.width = Math.max(1, W);
+      gridCanvas.height = Math.max(1, H);
+      gridCtx.clearRect(0, 0, W, H);
+      gridCtx.strokeStyle = "rgba(110,160,255,0.05)";
+      gridCtx.lineWidth = 1.3;
+
+      for (let x = gs; x < W; x += gs) {
+        gridCtx.beginPath();
+        gridCtx.moveTo(x + 0.5, 0);
+        gridCtx.lineTo(x + 0.5, H);
+        gridCtx.stroke();
+      }
+      for (let y = gs; y < H; y += gs) {
+        gridCtx.beginPath();
+        gridCtx.moveTo(0, y + 0.5);
+        gridCtx.lineTo(W, y + 0.5);
+        gridCtx.stroke();
+      }
+      gridReady = true;
+    }
+
+    let wormholes = [];
+    function resize() {
+      const cssW = window.innerWidth;
+      const cssH = window.innerHeight;
+      dpr = Math.min(DPR_CAP, window.devicePixelRatio || 1);
+
+      canvas.width = Math.floor(cssW * dpr);
+      canvas.height = Math.floor(cssH * dpr);
+      canvas.style.width = cssW + "px";
+      canvas.style.height = cssH + "px";
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      W = cssW;
+      H = cssH;
+      centerX = W / 2;
+      centerY = H / 2;
+
+      buildGrid();
+
+      if (wormholes.length) {
+        wormholes[0].x = W * 0.24; wormholes[0].y = H * 0.38;
+        wormholes[1].x = W * 0.76; wormholes[1].y = H * 0.62;
+      }
+    }
+    window.addEventListener("resize", resize, { passive: true });
+
+    const els = {
+      seed: document.getElementById("seed"),
+      record: document.getElementById("record"),
+      gravity: document.getElementById("gravity"),
+      psi: document.getElementById("psi"),
+      closed: document.getElementById("closed"),
+      cyFlux: document.getElementById("cyFlux"),
+      brane: document.getElementById("brane"),
+      dark: document.getElementById("dark"),
+      vib: document.getElementById("vib"),
+      noise: document.getElementById("noise"),
+      damping: document.getElementById("damping"),
+      mtheory: document.getElementById("mtheory"),
+      evap: document.getElementById("evap"),
+      inflationMode: document.getElementById("inflationMode"),
+
+      reseedBtn: document.getElementById("reseedBtn"),
+      resetDefaultsBtn: document.getElementById("resetDefaultsBtn"),
+      exportJsonBtn: document.getElementById("exportJsonBtn"),
+      exportCsvBtn: document.getElementById("exportCsvBtn"),
+
+      sweepParam: document.getElementById("sweepParam"),
+      sweepMin: document.getElementById("sweepMin"),
+      sweepMax: document.getElementById("sweepMax"),
+      sweepSteps: document.getElementById("sweepSteps"),
+      sweepRuns: document.getElementById("sweepRuns"),
+      sweepSeconds: document.getElementById("sweepSeconds"),
+      sweepBaseSeed: document.getElementById("sweepBaseSeed"),
+      runSweepBtn: document.getElementById("runSweepBtn"),
+      stopSweepBtn: document.getElementById("stopSweepBtn"),
+      exportSweepJsonBtn: document.getElementById("exportSweepJsonBtn"),
+      exportSweepCsvBtn: document.getElementById("exportSweepCsvBtn"),
+      sweepBar: document.getElementById("sweepBar"),
+      sweepStatus: document.getElementById("sweepStatus"),
+    };
+
+    // Tooltip
+    const tooltip = document.getElementById("tooltip");
+    function showTooltip(text, x, y) {
+      tooltip.textContent = text;
+      tooltip.style.display = "block";
+      const pad = 14;
+      const tw = tooltip.offsetWidth || 260;
+      const th = tooltip.offsetHeight || 80;
+      const nx = clamp(x + 20, pad, window.innerWidth - tw - pad);
+      const ny = clamp(y + 15, pad, window.innerHeight - th - pad);
+      tooltip.style.left = nx + "px";
+      tooltip.style.top = ny + "px";
+    }
+    function hideTooltip() { tooltip.style.display = "none"; }
+    document.querySelectorAll("[data-tip]").forEach(el => {
+      el.addEventListener("mouseenter", e => showTooltip(el.dataset.tip, e.pageX, e.pageY));
+      el.addEventListener("mousemove", e => showTooltip(el.dataset.tip, e.pageX, e.pageY));
+      el.addEventListener("mouseleave", hideTooltip);
+    });
+
+    // UI toggle
+    const toggleBtn = document.getElementById("toggleBtn");
+    const pauseBtn = document.getElementById("pauseBtn");
+    const uiPanel = document.getElementById("ui");
+    let panelVisible = true;
+    function togglePanel() {
+      panelVisible = !panelVisible;
+      uiPanel.classList.toggle("hidden", !panelVisible);
+      toggleBtn.textContent = panelVisible ? "✕" : "☰";
+    }
+    toggleBtn.addEventListener("click", togglePanel);
+    toggleBtn.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") togglePanel(); });
+
+    // Simulation state
+    let particles = [];
+    let radiation = [];
+    let bubbles = [];
+    let paused = false;
+    let currentHorizonR = 0;
+    const MAX_P = 1200;
+    let totalEvaporated = 0;
+
+    // Recording
+    let t0 = performance.now();
+    let lastLogMs = 0;
+    const series = [];
+
+    function snapshotParams(){
+      return {
+        gravity: +els.gravity.value,
+        psi: +els.psi.value,
+        closed: +els.closed.value,
+        cyFlux: +els.cyFlux.value,
+        brane: +els.brane.value,
+        dark: +els.dark.value,
+        vib: +els.vib.value,
+        noise: +els.noise.value,
+        damping: +els.damping.value,
+        mtheory: els.mtheory.checked,
+        evap: els.evap.checked,
+        inflationMode: els.inflationMode.value
+      };
+    }
+
+    function logSample(simTimeSec){
+      let openCount = 0;
+      for (let i = 0; i < particles.length; i++) if (!particles[i].isClosed) openCount++;
+      const closedCount = particles.length - openCount;
+
+      let ke = 0;
+      let meanSpeed = 0;
+      for (let i = 0; i < particles.length; i++){
+        const p = particles[i];
+        const v2 = p.vx*p.vx + p.vy*p.vy;
+        ke += 0.5 * v2;
+        meanSpeed += Math.sqrt(v2);
+      }
+      meanSpeed /= Math.max(1, particles.length);
+
+      let inside = 0;
+      const h = currentHorizonR;
+      for (let i = 0; i < particles.length; i++){
+        const p = particles[i];
+        if (Math.hypot(p.x-centerX, p.y-centerY) <= h) inside++;
+      }
+      const insideFrac = inside / Math.max(1, particles.length);
+
+      series.push({
+        t: +simTimeSec.toFixed(2),
+        open: openCount,
+        closed: closedCount,
+        radiation: radiation.length,
+        horizonR: +currentHorizonR.toFixed(3),
+        KE: +ke.toFixed(4),
+        meanSpeed: +meanSpeed.toFixed(4),
+        insideFrac: +insideFrac.toFixed(4)
+      });
+    }
+
+    function downloadText(filename, text){
+      const blob = new Blob([text], {type:"text/plain;charset=utf-8"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportJSON(){
+      const payload = {
+        modelVersion: MODEL_VERSION,
+        exportedAtISO: new Date().toISOString(),
+        seed: parseInt(els.seed.value || "0", 10),
+        params: snapshotParams(),
+        seriesHz1: series.slice()
+      };
+      downloadText("string_cosmos_experiment.json", JSON.stringify(payload, null, 2));
+    }
+
+    function exportCSV(){
+      const header = "t,open,closed,radiation,horizonR,KE,meanSpeed,insideFrac\n";
+      if (!series.length){
+        downloadText("string_cosmos_series.csv", header);
+        return;
+      }
+      const rows = series.map(s =>
+        [s.t, s.open, s.closed, s.radiation, s.horizonR, s.KE, s.meanSpeed, s.insideFrac].join(",")
+      ).join("\n");
+      downloadText("string_cosmos_series.csv", header + rows + "\n");
+    }
+
+    els.exportJsonBtn.addEventListener("click", exportJSON);
+    els.exportCsvBtn.addEventListener("click", exportCSV);
+
+    function reseedRngFromSeed(seedInt){
+      const s = String(seedInt);
+      const seedGen = xmur3(s);
+      const seedU32 = seedGen();
+      rng = mulberry32(seedU32);
+    }
+
+    function reseedAndRestart(){
+      const seedInt = parseInt(els.seed.value || "0", 10);
+      reseedRngFromSeed(seedInt);
+      series.length = 0;
+      t0 = performance.now();
+      lastLogMs = 0;
+      seedCosmos();
+    }
+
+    function resetDefaults(){
+      els.seed.value = 12345;
+      els.record.checked = false;
+      els.gravity.value = 1.32;
+      els.psi.value = 1.62;
+      els.closed.value = 0.58;
+      els.cyFlux.value = 1.55;
+      els.brane.value = 1.22;
+      els.dark.value = 0.55;
+      els.vib.value = 4.1;
+      els.noise.value = 0.36;
+      els.damping.value = 0.949;
+      els.mtheory.checked = false;
+      els.evap.checked = true;
+      els.inflationMode.value = "eternal";
+      reseedAndRestart();
+    }
+
+    els.reseedBtn.addEventListener("click", reseedAndRestart);
+    els.resetDefaultsBtn.addEventListener("click", resetDefaults);
+
+    function getInflationParams() {
+      const mode = els.inflationMode.value;
+      if (mode === "slow") return { bubbleRate: 0.008, growthMult: 0.65, darkBoost: 0.4 };
+      if (mode === "eternal") return { bubbleRate: 0.028, growthMult: 1.45, darkBoost: 1.1 };
+      if (mode === "chaotic") return { bubbleRate: 0.045, growthMult: 2.1, darkBoost: 1.8 };
+      return { bubbleRate: 0.012, growthMult: 1, darkBoost: 0.7 };
+    }
+
+    // Branes
+    const branes = [{ angle: 0.3, offset: 26 }, { angle: 1.92, offset: 44 }, { angle: 3.58, offset: 23 }, { angle: 5.28, offset: 40 }];
+    function getBraneForce(x, y, braneStrength) {
+      let fx = 0, fy = 0;
+      const bs = braneStrength * 0.0195;
+      for (let i = 0; i < branes.length; i++) {
+        const b = branes[i];
+        const dx = x - centerX, dy = y - centerY;
+        const dist = dx * Math.sin(b.angle) - dy * Math.cos(b.angle) - b.offset;
+        if (Math.abs(dist) < 122) {
+          const pull = bs * (1 - Math.abs(dist) / 122);
+          fx -= Math.sin(b.angle) * pull * dist * 0.83;
+          fy += Math.cos(b.angle) * pull * dist * 0.83;
+        }
+      }
+      return { fx, fy };
+    }
+    function drawBranes(braneStrength) {
+      ctx.save();
+      for (let i = 0; i < branes.length; i++) {
+        const b = branes[i];
+        ctx.strokeStyle = `rgba(255,240,150,${0.28 * braneStrength})`;
+        ctx.lineWidth = 6.5;
+        ctx.shadowBlur = 33;
+        ctx.shadowColor = "#ffeb9f";
+        const L = Math.max(W, H) * 0.84;
+        const c = Math.cos(b.angle), s = Math.sin(b.angle);
+        ctx.beginPath();
+        ctx.moveTo(centerX + c * L - s * b.offset, centerY + s * L + c * b.offset);
+        ctx.lineTo(centerX - c * L - s * b.offset, centerY - s * L + c * b.offset);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Forces
+    function gravityForce(x, y, Gmult) {
+      const dx = x - centerX;
+      const dy = y - centerY;
+      const r2 = dx * dx + dy * dy + 98;
+      const r = Math.sqrt(r2);
+      const G = 95 * Gmult;
+      const f = -G / (r2 * r);
+      return { fx: f * dx, fy: f * dy };
+    }
+    function psiForce(x, y, ps) {
+      const dx = x - centerX;
+      const dy = y - centerY;
+      const r = Math.hypot(dx, dy) + 82;
+      const rad = -0.78 * ps * Math.exp(-r / (Math.min(W, H) * 0.35));
+      let fx = rad * dx / r;
+      let fy = rad * dy / r;
+      const tang = 0.48 * ps * Math.exp(-r / (Math.min(W, H) * 0.28));
+      fx += (-dy / r) * tang;
+      fy += (dx / r) * tang;
+      return { fx, fy };
+    }
+
+    // Visuals
+    function drawCalabiYau(intensity, mtheory) {
+      const t = performance.now() * 0.00095;
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.rotate(t * 0.008);
+      const base = Math.min(W, H) * 0.202 * intensity;
+
+      ctx.shadowBlur = mtheory ? 48 : 34;
+      ctx.shadowColor = mtheory ? "#ff70ff" : "#d090ff";
+
+      const layers = mtheory ? 8 : 5;
+      for (let l = 0; l < layers; l++) {
+        const hue = mtheory ? (248 + l * 17) : (262 + l * 21);
+        const light = mtheory ? 84 : 79;
+        const alpha = intensity * 0.105 * (1 - l * 0.15);
+
+        ctx.strokeStyle = `hsla(${hue},92%,${light}%,${alpha})`;
+        ctx.lineWidth = mtheory ? (2.8 - l * 0.3) : (2.4 - l * 0.38);
+
+        ctx.beginPath();
+        for (let i = 0; i <= 188; i++) {
+          const a = (i / 188) * Math.PI * 2;
+          const s1 = Math.sin((mtheory ? 7.8 : 6.8) * a + t * 1.3 + l);
+          const c1 = Math.cos((mtheory ? 11.2 : 9) * a);
+          const rr = base * (1 - l * 0.19) * (1 + 0.58 * s1 + 0.33 * c1);
+          ctx.lineTo(rr * Math.cos(a), rr * Math.sin(a) * 0.7);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawWormholes() {
+      const pulse = 1 + Math.sin(performance.now() / 160) * 0.14;
+      for (let i = 0; i < wormholes.length; i++) {
+        const wh = wormholes[i];
+        ctx.save();
+        ctx.translate(wh.x, wh.y);
+        ctx.shadowBlur = 52;
+        ctx.shadowColor = wh.color;
+        ctx.strokeStyle = wh.color;
+        ctx.lineWidth = 8.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, wh.r * pulse, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.lineWidth = 3.5;
+        ctx.strokeStyle = "#ffffff88";
+        ctx.beginPath();
+        ctx.arc(0, 0, wh.r * pulse * 0.62, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    function handleWormholeTeleport(p) {
+      for (let i = 0; i < wormholes.length; i++) {
+        const wh = wormholes[i];
+        if (Math.hypot(p.x - wh.x, p.y - wh.y) < wh.r * 1.45) {
+          const pair = wormholes[wh.pair];
+          p.x = pair.x + (rand() - 0.5) * 22;
+          p.y = pair.y + (rand() - 0.5) * 22;
+          p.vx = (pair.x - wh.x) * 0.8 + (rand() - 0.5) * 3;
+          p.vy = (pair.y - wh.y) * 0.8 + (rand() - 0.5) * 3;
+          return;
+        }
+      }
+    }
+
+    function drawBubbles() {
+      for (let i = 0; i < bubbles.length; i++) {
+        const b = bubbles[i];
+        if (!b.active) continue;
+        const alpha = Math.max(0.08, 0.55 - b.r / 480);
+        ctx.strokeStyle = `hsla(${b.hue},90%,82%,${alpha})`;
+        ctx.lineWidth = 5;
+        ctx.shadowBlur = 36;
+        ctx.shadowColor = `hsla(${b.hue},100%,88%,0.65)`;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
+    function updateBubbles(infParams) {
+      const maxR = Math.min(W, H) * 0.72;
+      for (let i = 0; i < bubbles.length; i++) {
+        const b = bubbles[i];
+        if (!b.active) continue;
+        b.r += b.growth * infParams.growthMult;
+        if (b.r > maxR) b.active = false;
+      }
+      if (rand() < infParams.bubbleRate && bubbles.length < 9) {
+        bubbles.push({
+          x: rand() * W * 0.72 + W * 0.14,
+          y: rand() * H * 0.72 + H * 0.14,
+          r: 48,
+          growth: 0.055 + rand() * 0.16,
+          hue: 188 + rand() * 142,
+          active: true
+        });
+      }
+    }
+
+    function getBubbleEffect(x, y) {
+      for (let i = 0; i < bubbles.length; i++) {
+        const b = bubbles[i];
+        if (!b.active) continue;
+        if (Math.hypot(x - b.x, y - b.y) < b.r) return { vibExtra: 3.1, hueShift: (b.hue - 190) * 0.35 };
+      }
+      return { vibExtra: 0, hueShift: 0 };
+    }
+
+    function drawParticle(p, mtheory, vibBase, horizonR) {
+      const alpha = Math.min(0.99, 0.29 + p.life / 190);
+      const dx = p.x - centerX, dy = p.y - centerY;
+      const dist = Math.hypot(dx, dy);
+      const stretch = dist > horizonR ? 1 + (dist - horizonR) / 360 : 1;
+
+      const bubble = getBubbleEffect(p.x, p.y);
+      const totalVib = vibBase + bubble.vibExtra + (mtheory ? 2.2 : 0);
+
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(Math.atan2(p.vy, p.vx) + p.phase * 0.32);
+
+      ctx.shadowBlur = p.isClosed ? 52 : 26;
+      ctx.shadowColor = `hsla(${p.hue + bubble.hueShift},100%,87%,0.96)`;
+
+      if (p.isClosed) {
+        ctx.strokeStyle = `hsla(${p.hue + bubble.hueShift},99%,78%,${alpha})`;
+        ctx.lineWidth = 5.8;
+        const petals = mtheory ? 13 : 10;
+
+        ctx.beginPath();
+        for (let i = 0; i <= 80; i++) {
+          const a = (i / 80) * Math.PI * 2;
+          const wave = 1 + 0.56 * Math.sin(petals * a + p.phase * 4.2) * (totalVib * 0.19);
+          const rr = p.size * stretch * wave * (mtheory ? 1.18 : 1);
+          ctx.lineTo(rr * Math.cos(a), rr * Math.sin(a) * 0.79);
+        }
+        ctx.closePath();
+        ctx.stroke();
+
+        ctx.lineWidth = 2.6;
+        ctx.strokeStyle = `hsla(${p.hue + 34 + bubble.hueShift},100%,93%,${alpha * 0.72})`;
+        ctx.stroke();
+      } else {
+        ctx.strokeStyle = `hsla(${p.hue + bubble.hueShift},96%,71%,${alpha})`;
+        ctx.lineWidth = 4.6;
+        const len = p.size * stretch * 1.25;
+        const wiggle = totalVib * 5.9 * Math.sin(p.phase * 3.1);
+        ctx.beginPath();
+        ctx.moveTo(-len, 0);
+        ctx.quadraticCurveTo(0, wiggle, len, 0);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function updateMysteryText() {
+      const infMode = els.inflationMode.value;
+      const evapOn = els.evap.checked;
+      let txt = "Deterministic toy cosmos with exportable observables and sweep mode";
+      if (infMode === "chaotic") txt = "Chaotic multiverse scan: higher bubble rate and expansion scaling";
+      else if (evapOn && currentHorizonR < 80) txt = "Evaporation phase: horizon shrinking and radiation rising";
+      document.getElementById("mysteryText").textContent = txt;
+    }
+
+    // Loop control
+    const TARGET_FPS = 60;
+    const FRAME_MS = 1000 / TARGET_FPS;
+    let rafId = 0;
+    let lastFrameTime = 0;
+
+    function startLoop() {
+      if (rafId) return;
+      lastFrameTime = 0;
+      rafId = requestAnimationFrame(stepLoop);
+    }
+    function stopLoop() {
+      if (!rafId) return;
+      cancelAnimationFrame(rafId);
+      rafId = 0;
+      lastFrameTime = 0;
+    }
+
+    // Model update (one step), reusable for headless sweep
+    function physicsStep() {
+      const gravityMult = +els.gravity.value;
+      const psiMult = +els.psi.value;
+      const braneStrength = +els.brane.value;
+      const darkEnergy = +els.dark.value;
+      const damping = +els.damping.value;
+      const noise = +els.noise.value;
+      const vibBase = +els.vib.value;
+      const mtheory = els.mtheory.checked;
+      const evapOn = els.evap.checked;
+      const infParams = getInflationParams();
+
+      updateBubbles(infParams);
+
+      if (evapOn && currentHorizonR > 18) {
+        const evapRate = Math.max(0.0008, radiation.length * 0.00045);
+        currentHorizonR -= evapRate;
+        totalEvaporated += evapRate * 1200;
+      }
+
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+
+        let g = gravityForce(p.x, p.y, gravityMult);
+        if (p.isClosed) { g.fx *= 1.68; g.fy *= 1.68; }
+
+        const ps = psiForce(p.x, p.y, psiMult);
+        const br = getBraneForce(p.x, p.y, braneStrength);
+
+        const mScale = mtheory ? 0.955 : 0.972;
+        p.vx += (g.fx * 0.0023 + ps.fx * 0.0085 + br.fx) * mScale;
+        p.vy += (g.fy * 0.0023 + ps.fy * 0.0085 + br.fy) * mScale;
+
+        const dx = p.x - centerX, dy = p.y - centerY;
+        const r = Math.hypot(dx, dy) || 1;
+
+        p.vx += (dx / r) * darkEnergy * 0.0048 * infParams.darkBoost;
+        p.vy += (dy / r) * darkEnergy * 0.0048 * infParams.darkBoost;
+
+        const foam = (r < 215) ? 0.135 * (1 - r / 215) : 0;
+        const n = noise * (0.085 + foam);
+        p.vx += (rand() - 0.5) * n;
+        p.vy += (rand() - 0.5) * n;
+
+        if (mtheory) {
+          p.vx += (rand() - 0.5) * 1.1;
+          p.vy += (rand() - 0.5) * 1.1;
+        }
+
+        p.vx *= damping;
+        p.vy *= damping;
+
+        p.x += p.vx;
+        p.y += p.vy;
+
+        p.life += 1;
+        p.phase += 0.25 + vibBase * 0.135 + Math.hypot(p.vx, p.vy) * 0.095 + (mtheory ? 1.4 : 0);
+
+        if (p.x < 0) p.x += W; else if (p.x > W) p.x -= W;
+        if (p.y < 0) p.y += H; else if (p.y > H) p.y -= H;
+
+        handleWormholeTeleport(p);
+
+        if (evapOn && rand() < 0.026 && r < currentHorizonR * 1.12 && r > currentHorizonR * 0.78) {
+          radiation.push({
+            x: p.x + (rand() - 0.5) * 22,
+            y: p.y + (rand() - 0.5) * 22,
+            vx: (p.x - centerX) / r * 2.4 + (rand() - 0.5) * 1.3,
+            vy: (p.y - centerY) / r * 2.4 + (rand() - 0.5) * 1.3,
+            life: 72,
+            hue: 205 + rand() * 42
+          });
+        }
+      }
+
+      for (let i = radiation.length - 1; i >= 0; i--) {
+        const rr = radiation[i];
+        rr.x += rr.vx; rr.y += rr.vy;
+        rr.life -= 1;
+        rr.vx *= 0.968; rr.vy *= 0.968;
+        if (rr.life <= 0) radiation.splice(i, 1);
+      }
+
+      if (evapOn && currentHorizonR < 18 && totalEvaporated > 8000) {
+        currentHorizonR = Math.min(W, H) * 0.235;
+        totalEvaporated = 0;
+        for (let i = 0; i < 280; i++) {
+          radiation.push({
+            x: centerX + (rand() - 0.5) * currentHorizonR * 1.6,
+            y: centerY + (rand() - 0.5) * currentHorizonR * 1.6,
+            vx: (rand() - 0.5) * 5,
+            vy: (rand() - 0.5) * 5,
+            life: 45 + rand() * 60,
+            hue: 210 + rand() * 60
+          });
+        }
+      }
+    }
+
+    function drawFrame() {
+      const darkEnergy = +els.dark.value;
+      const vibBase = +els.vib.value;
+      const mtheory = els.mtheory.checked;
+      const horizonR = currentHorizonR;
+
+      ctx.fillStyle = "rgba(1,4,16,0.22)";
+      ctx.fillRect(0, 0, W, H);
+      if (gridReady) ctx.drawImage(gridCanvas, 0, 0);
+
+      const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, horizonR * 1.85);
+      grad.addColorStop(0, "rgba(130,245,255,0.42)");
+      grad.addColorStop(0.6, "rgba(60,130,240,0.19)");
+      grad.addColorStop(1, "transparent");
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.arc(centerX, centerY, horizonR * 1.82, 0, Math.PI * 2); ctx.fill();
+
+      ctx.strokeStyle = "rgba(255,255,255,0.55)";
+      ctx.lineWidth = 4.5;
+      ctx.beginPath(); ctx.arc(centerX, centerY, horizonR, 0, Math.PI * 2); ctx.stroke();
+
+      drawBranes(+els.brane.value);
+      drawCalabiYau(+els.cyFlux.value, mtheory);
+      drawWormholes();
+      drawBubbles();
+
+      ctx.strokeStyle = `rgba(150,220,255,${0.11 + darkEnergy * 0.09})`;
+      ctx.lineWidth = 2.4;
+      ctx.setLineDash([9, 17]);
+      ctx.beginPath(); ctx.arc(centerX, centerY, Math.min(W, H) * 0.5, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+
+      for (let i = 0; i < particles.length; i++) drawParticle(particles[i], mtheory, vibBase, horizonR);
+
+      for (let i = 0; i < radiation.length; i++) {
+        const rr = radiation[i];
+        ctx.fillStyle = `hsla(${rr.hue},100%,87%,${(rr.life / 72) * 0.94})`;
+        ctx.beginPath(); ctx.arc(rr.x, rr.y, 2.4, 0, Math.PI * 2); ctx.fill();
+      }
+
+      updateMysteryText();
+    }
+
+    function stepLoop(ts) {
+      if (!rafId) return;
+      if (!lastFrameTime) lastFrameTime = ts;
+      const elapsed = ts - lastFrameTime;
+
+      if (elapsed >= FRAME_MS) {
+        lastFrameTime = ts - (elapsed % FRAME_MS);
+
+        physicsStep();
+        drawFrame();
+
+        if (els.record.checked){
+          const now = performance.now();
+          const simTimeSec = (now - t0) / 1000;
+          if (now - lastLogMs >= 1000){
+            lastLogMs = now;
+            logSample(simTimeSec);
+          }
+        }
+      }
+      rafId = requestAnimationFrame(stepLoop);
+    }
+
+    function computeObservablesOnce() {
+      let openCount = 0;
+      for (let i = 0; i < particles.length; i++) if (!particles[i].isClosed) openCount++;
+      const closedCount = particles.length - openCount;
+
+      const infParams = getInflationParams();
+      const avgVib = (+els.vib.value).toFixed(1);
+      const expRate = ((+els.dark.value) * infParams.darkBoost * 100).toFixed(1);
+      const horizonPct = (currentHorizonR / (Math.min(W, H) * 0.235) * 100).toFixed(0);
+
+      document.getElementById("obsText").innerHTML =
+        `Open strings: <b>${openCount}</b><br>` +
+        `Closed: <b>${closedCount}</b><br>` +
+        `Avg vibration: <b>${avgVib}</b><br>` +
+        `Expansion scale: <b>${expRate}%</b><br>` +
+        `Radiation count: <b>${radiation.length}</b><br>` +
+        `Horizon: <b>${horizonPct}%</b>`;
+    }
+
+    function setPaused(next) {
+      paused = next;
+      pauseBtn.textContent = paused ? "Resume" : "Pause";
+      document.getElementById("mysteryBox").style.display = paused ? "none" : "block";
+      document.getElementById("observablesBox").style.display = paused ? "block" : "none";
+
+      if (paused) {
+        stopLoop();
+        computeObservablesOnce();
+        drawFrame();
+      } else {
+        startLoop();
+      }
+    }
+    pauseBtn.addEventListener("click", () => setPaused(!paused));
+    pauseBtn.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") setPaused(!paused); });
+
+    // Particle type
+    class StringParticle {
+      constructor(x, y, vx, vy, isClosed) {
+        this.x = x; this.y = y;
+        this.vx = vx; this.vy = vy;
+        this.isClosed = isClosed;
+        this.life = rand() * 180;
+        this.hue = isClosed ? 22 + rand() * 52 : 168 + rand() * 72;
+        this.phase = rand() * Math.PI * 2;
+        this.size = isClosed ? 17 + rand() * 13 : 13.5;
+      }
+    }
+
+    function addStrings(x, y, count = 62) {
+      const ratio = +els.closed.value;
+      for (let i = 0; i < count; i++) {
+        const isClosed = rand() < ratio;
+        particles.push(new StringParticle(
+          x + (rand() - 0.5) * 46,
+          y + (rand() - 0.5) * 46,
+          (rand() - 0.5) * 1.9,
+          (rand() - 0.5) * 1.9,
+          isClosed
+        ));
+      }
+      if (particles.length > MAX_P) particles.splice(0, particles.length - MAX_P);
+    }
+
+    function seedCosmos() {
+      particles = [];
+      radiation = [];
+      bubbles = [];
+      totalEvaporated = 0;
+
+      currentHorizonR = Math.min(W, H) * 0.235;
+      const spread = Math.min(W, H) * 0.445;
+      const ratio = +els.closed.value;
+
+      for (let i = 0; i < 820; i++) {
+        const a = rand() * Math.PI * 2;
+        const r = Math.pow(rand(), 1.22) * spread;
+        const x = centerX + Math.cos(a) * r;
+        const y = centerY + Math.sin(a) * r;
+        const speed = 0.32 + rand() * 0.78;
+        particles.push(new StringParticle(x, y, -Math.sin(a) * speed, Math.cos(a) * speed, rand() < ratio));
+      }
+
+      wormholes = [
+        { x: W * 0.24, y: H * 0.38, r: 42, color: "#aaffff", pair: 1 },
+        { x: W * 0.76, y: H * 0.62, r: 42, color: "#aaffff", pair: 0 }
+      ];
+
+      for (let i = 0; i < 5; i++) {
+        bubbles.push({
+          x: rand() * W * 0.75 + W * 0.125,
+          y: rand() * H * 0.75 + H * 0.125,
+          r: 55 + rand() * 140,
+          growth: 0.06 + rand() * 0.18,
+          hue: 195 + rand() * 135,
+          active: true
+        });
+      }
+    }
+
+    // Input handlers
+    canvas.addEventListener("pointerdown", e => {
+      const rect = canvas.getBoundingClientRect();
+      addStrings(e.clientX - rect.left, e.clientY - rect.top);
+    }, { passive: true });
+
+    canvas.addEventListener("dblclick", () => {
+      // keep user expectations: double click reseeds
+      reseedAndRestart();
+      if (paused) drawFrame();
+    });
+
+    window.addEventListener("keydown", e => {
+      const k = e.key.toLowerCase();
+      if (k === "p") setPaused(!paused);
+      if (k === "r") { reseedAndRestart(); if (paused) drawFrame(); }
+      if (k === "h") togglePanel();
+    });
+
+    // Sweep mode
+    let sweepStopFlag = false;
+    let sweepResults = null;
+
+    function setSweepUI(running){
+      els.runSweepBtn.disabled = running;
+      els.stopSweepBtn.disabled = !running;
+      els.exportSweepJsonBtn.disabled = running || !sweepResults;
+      els.exportSweepCsvBtn.disabled = running || !sweepResults;
+      els.sweepParam.disabled = running;
+      els.sweepMin.disabled = running;
+      els.sweepMax.disabled = running;
+      els.sweepSteps.disabled = running;
+      els.sweepRuns.disabled = running;
+      els.sweepSeconds.disabled = running;
+      els.sweepBaseSeed.disabled = running;
+    }
+
+    function exportSweepJSON(){
+      if (!sweepResults) return;
+      downloadText("string_cosmos_sweep.json", JSON.stringify(sweepResults, null, 2));
+    }
+    function exportSweepCSV(){
+      if (!sweepResults) return;
+      const header = "param,paramValue,runs,secondsPerRun,mean_open,mean_closed,mean_radiation,mean_horizonR,mean_KE,mean_meanSpeed,mean_insideFrac\n";
+      const rows = sweepResults.results.map(r => [
+        sweepResults.param,
+        r.value,
+        r.runs,
+        sweepResults.secondsPerRun,
+        r.mean.open,
+        r.mean.closed,
+        r.mean.radiation,
+        r.mean.horizonR,
+        r.mean.KE,
+        r.mean.meanSpeed,
+        r.mean.insideFrac
+      ].join(",")).join("\n");
+      downloadText("string_cosmos_sweep.csv", header + rows + "\n");
+    }
+    els.exportSweepJsonBtn.addEventListener("click", exportSweepJSON);
+    els.exportSweepCsvBtn.addEventListener("click", exportSweepCSV);
+
+    els.stopSweepBtn.addEventListener("click", () => { sweepStopFlag = true; });
+
+    function meanOf(arr){
+      if (!arr.length) return 0;
+      let s = 0;
+      for (let i = 0; i < arr.length; i++) s += arr[i];
+      return s / arr.length;
+    }
+
+    function computeSummary(){
+      let openCount = 0;
+      for (let i = 0; i < particles.length; i++) if (!particles[i].isClosed) openCount++;
+      const closedCount = particles.length - openCount;
+
+      let ke = 0;
+      let meanSpeed = 0;
+      for (let i = 0; i < particles.length; i++){
+        const p = particles[i];
+        const v2 = p.vx*p.vx + p.vy*p.vy;
+        ke += 0.5 * v2;
+        meanSpeed += Math.sqrt(v2);
+      }
+      meanSpeed /= Math.max(1, particles.length);
+
+      let inside = 0;
+      const h = currentHorizonR;
+      for (let i = 0; i < particles.length; i++){
+        const p = particles[i];
+        if (Math.hypot(p.x-centerX, p.y-centerY) <= h) inside++;
+      }
+      const insideFrac = inside / Math.max(1, particles.length);
+
+      return {
+        open: openCount,
+        closed: closedCount,
+        radiation: radiation.length,
+        horizonR: +currentHorizonR.toFixed(6),
+        KE: +ke.toFixed(6),
+        meanSpeed: +meanSpeed.toFixed(6),
+        insideFrac: +insideFrac.toFixed(6)
+      };
+    }
+
+    function setParamValue(param, value){
+      if (param === "damping"){
+        // keep in a stable range
+        value = clamp(value, 0.88, 0.997);
+      }
+      if (els[param] && els[param].type === "range"){
+        els[param].value = value;
+        return;
+      }
+      // fallback for safety
+      if (param === "cyFlux") els.cyFlux.value = value;
+    }
+
+    function getParamValue(param){
+      if (els[param] && (els[param].type === "range" || els[param].type === "number")) return +els[param].value;
+      if (param === "cyFlux") return +els.cyFlux.value;
+      return NaN;
+    }
+
+    function runHeadlessSeconds(seconds){
+      // uses physicsStep without drawing
+      const steps = Math.max(1, Math.floor(seconds * TARGET_FPS));
+      for (let i = 0; i < steps; i++) physicsStep();
+    }
+
+    async function runSweep(){
+      // Ensure paused for performance and deterministic behavior
+      if (!paused) setPaused(true);
+
+      sweepStopFlag = false;
+      sweepResults = null;
+      setSweepUI(true);
+      els.sweepBar.style.width = "0%";
+      els.sweepStatus.textContent = "Preparing sweep";
+
+      // Read sweep settings
+      const param = els.sweepParam.value;
+      const minV = parseFloat(els.sweepMin.value);
+      const maxV = parseFloat(els.sweepMax.value);
+      const stepsN = Math.max(2, parseInt(els.sweepSteps.value, 10) || 2);
+      const runsPer = Math.max(1, parseInt(els.sweepRuns.value, 10) || 1);
+      const secondsPerRun = Math.max(1, parseInt(els.sweepSeconds.value, 10) || 1);
+      const baseSeed = parseInt(els.sweepBaseSeed.value || "0", 10);
+
+      // Build sweep values
+      const values = [];
+      for (let i = 0; i < stepsN; i++){
+        const t = i / (stepsN - 1);
+        values.push(minV + (maxV - minV) * t);
+      }
+
+      const originalValue = getParamValue(param);
+      const originalSeed = parseInt(els.seed.value || "0", 10);
+
+      const totalRuns = values.length * runsPer;
+      let doneRuns = 0;
+
+      const results = [];
+
+      for (let vi = 0; vi < values.length; vi++){
+        if (sweepStopFlag) break;
+
+        const v = values[vi];
+        setParamValue(param, v);
+
+        const opens = [], closeds = [], rads = [], horizons = [], KEs = [], speeds = [], insides = [];
+
+        for (let ri = 0; ri < runsPer; ri++){
+          if (sweepStopFlag) break;
+
+          const runSeed = baseSeed + (vi * 100000) + ri;
+          // ensure UI seed reflects run seed for traceability
+          els.seed.value = runSeed;
+
+          reseedRngFromSeed(runSeed);
+          seedCosmos();
+
+          // headless simulate
+          runHeadlessSeconds(secondsPerRun);
+
+          const s = computeSummary();
+          opens.push(s.open);
+          closeds.push(s.closed);
+          rads.push(s.radiation);
+          horizons.push(s.horizonR);
+          KEs.push(s.KE);
+          speeds.push(s.meanSpeed);
+          insides.push(s.insideFrac);
+
+          doneRuns++;
+          const pct = (doneRuns / totalRuns) * 100;
+          els.sweepBar.style.width = pct.toFixed(1) + "%";
+          els.sweepStatus.textContent = `Running: ${param}=${v.toFixed(4)} | run ${ri+1}/${runsPer} | ${doneRuns}/${totalRuns}`;
+
+          // yield to keep UI responsive
+          await new Promise(res => setTimeout(res, 0));
+        }
+
+        if (opens.length){
+          results.push({
+            value: +v.toFixed(8),
+            runs: opens.length,
+            mean: {
+              open: +meanOf(opens).toFixed(6),
+              closed: +meanOf(closeds).toFixed(6),
+              radiation: +meanOf(rads).toFixed(6),
+              horizonR: +meanOf(horizons).toFixed(6),
+              KE: +meanOf(KEs).toFixed(6),
+              meanSpeed: +meanOf(speeds).toFixed(6),
+              insideFrac: +meanOf(insides).toFixed(6)
+            }
+          });
+        }
+      }
+
+      // Restore original state
+      els.seed.value = originalSeed;
+      setParamValue(param, originalValue);
+      reseedAndRestart();
+      drawFrame();
+
+      sweepResults = {
+        modelVersion: MODEL_VERSION,
+        exportedAtISO: new Date().toISOString(),
+        param,
+        min: minV,
+        max: maxV,
+        steps: stepsN,
+        runsPerStep: runsPer,
+        secondsPerRun,
+        baseSeed,
+        fixedParams: snapshotParams(),
+        results
+      };
+
+      setSweepUI(false);
+      els.exportSweepJsonBtn.disabled = !sweepResults;
+      els.exportSweepCsvBtn.disabled = !sweepResults;
+
+      if (sweepStopFlag){
+        els.sweepStatus.textContent = "Stopped. Partial results ready for export.";
+      } else {
+        els.sweepStatus.textContent = "Complete. Results ready for export.";
+        els.sweepBar.style.width = "100%";
+      }
+    }
+
+    els.runSweepBtn.addEventListener("click", runSweep);
+
+    // Pause-safe redraw on slider input
+    const sliderList = ["gravity","psi","closed","cyFlux","brane","dark","vib","noise","damping"];
+    sliderList.forEach(id => {
+      els[id].addEventListener("input", () => {
+        if (paused) { computeObservablesOnce(); drawFrame(); }
+      }, { passive: true });
+    });
+    els.inflationMode.addEventListener("change", () => {
+      if (paused) { computeObservablesOnce(); drawFrame(); }
+    }, { passive: true });
+
+    // Click add strings (uses RNG for deterministic additions if seed and state are same)
+    canvas.addEventListener("pointerdown", e => {
+      const rect = canvas.getBoundingClientRect();
+      addStrings(e.clientX - rect.left, e.clientY - rect.top);
+      if (paused) drawFrame();
+    }, { passive: true });
+
+    // Boot
+    resize();
+    reseedAndRestart();
+    startLoop();
+  </script>
+</body>
+</html>
